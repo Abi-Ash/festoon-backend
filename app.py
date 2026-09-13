@@ -56,6 +56,16 @@ def create_app():
     def health():
         return {"success": True, "message": "Festoon Threads API is running."}
 
+    @app.get("/api/debug-cors")
+    def debug_cors():
+        raw = app.config["FRONTEND_URL"]
+        origins = [o.strip() for o in raw.split(",")]
+        return {
+            "raw_value": f"[{raw}]",
+            "raw_length": len(raw),
+            "parsed_origins": [f"[{o}]" for o in origins],
+        }
+
     @app.errorhandler(404)
     def not_found(e):
         return {"success": False, "message": "Resource not found."}, 404
