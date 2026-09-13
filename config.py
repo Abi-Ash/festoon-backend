@@ -35,10 +35,12 @@ class Config:
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    # Hosted MySQL providers (e.g. Aiven) require SSL. Set MYSQL_SSL=true in
-    # production and point MYSQL_SSL_CA_CONTENT at the provider's CA
-    # certificate content (paste it directly as an env var value - simplest
-    # way to get a cert onto a host like Render without committing a file).
+    # Hosted MySQL providers (Aiven, TiDB Cloud, etc.) require SSL. Set
+    # MYSQL_SSL=true in production. If the provider gives you a specific CA
+    # certificate, paste its content into MYSQL_SSL_CA_CONTENT. If not (TiDB
+    # Cloud, for example, uses a publicly-trusted certificate rather than a
+    # custom one), we fall back to the certifi package's trusted root bundle
+    # - the same trust store your browser effectively relies on.
     _connect_args = {}
     if os.getenv("MYSQL_SSL", "false").lower() == "true":
         ca_content = os.getenv("MYSQL_SSL_CA_CONTENT")
@@ -47,6 +49,9 @@ class Config:
             with open(ca_path, "w") as f:
                 f.write(ca_content.replace("\\n", "\n"))
             _connect_args["ssl_ca"] = ca_path
+        else:
+            import certifi
+            _connect_args["ssl_ca"] = certifi.where()
         _connect_args["ssl_verify_cert"] = True
 
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True, "connect_args": _connect_args}
